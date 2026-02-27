@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 東京全能手冊</title>
+    <title>2026 東京全能手冊 V8</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -12,22 +12,21 @@
         body { font-family: -apple-system, "Noto Sans TC", sans-serif; background-color: #f8fafc; color: #1e293b; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .safe-bottom { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
-        .tab-active { color: #2563eb; }
         .card-shadow { box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05); }
+        .active-currency { background-color: #2563eb !important; color: white !important; }
     </style>
 </head>
 <body class="pb-24">
 
 <div id="app" v-cloak>
-    <header class="p-4 bg-white border-b sticky top-0 z-50 flex justify-between items-center">
-        <div>
+    <header class="p-4 bg-white border-b sticky top-0 z-50 flex justify-between items-center shadow-sm">
+        <div @click="page = 'trip'">
             <h1 class="font-bold text-lg text-blue-900 leading-none">TOKYO 2026</h1>
-            <p class="text-[10px] text-blue-500 font-black tracking-widest mt-1 uppercase">{{ page.toUpperCase() }}</p>
+            <p class="text-[10px] text-blue-500 font-black tracking-widest mt-1 uppercase">{{ page }}</p>
         </div>
-        <div class="flex items-center space-x-2">
-            <div class="text-right bg-slate-100 px-3 py-1 rounded-full">
-                <span class="text-[10px] font-mono font-bold text-slate-500">￥1={{ exchangeRate }}</span>
-            </div>
+        <div class="text-right bg-slate-100 px-3 py-1 rounded-full">
+            <span class="text-[10px] font-mono font-bold text-slate-500 block leading-none">匯率 JPY/TWD</span>
+            <span class="text-xs font-black text-blue-600">{{ exchangeRate }}</span>
         </div>
     </header>
 
@@ -40,55 +39,32 @@
                 <span>{{ day.displayDate }}</span>
             </button>
         </nav>
-
         <main class="p-4 space-y-4">
-            <section @click="navigate(itinerary[currentDayIndex].hotelAddr || itinerary[currentDayIndex].hotel)"
-                class="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-5 text-white shadow-lg relative cursor-pointer">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-[9px] bg-white/20 px-2 py-0.5 rounded font-black">LODGING</span>
-                    <button @click.stop="openHotelModal" class="text-white/60"><i class="fas fa-edit"></i></button>
-                </div>
+            <section @click="navigate(itinerary[currentDayIndex].hotelAddr || itinerary[currentDayIndex].hotel)" class="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-5 text-white shadow-lg relative cursor-pointer active:opacity-90">
+                <div class="flex justify-between items-start mb-2"><span class="text-[9px] bg-white/20 px-2 py-0.5 rounded font-black uppercase">Accommodation</span><button @click.stop="openHotelModal" class="text-white/60"><i class="fas fa-edit"></i></button></div>
                 <h2 class="text-xl font-bold leading-tight">{{ itinerary[currentDayIndex].hotel }}</h2>
-                <p class="text-[10px] opacity-70 mt-1 mb-4 h-4 overflow-hidden italic">{{ itinerary[currentDayIndex].hotelAddr }}</p>
-                <div class="bg-white/10 py-3 rounded-2xl flex items-center justify-center border border-white/20 text-xs font-bold">
-                    <i class="fas fa-location-arrow mr-2"></i>大眾運輸導航回飯店
-                </div>
+                <p class="text-[10px] opacity-70 mt-1 mb-4 italic">{{ itinerary[currentDayIndex].hotelAddr }}</p>
+                <div class="bg-white/10 py-3 rounded-2xl text-center text-xs font-bold"><i class="fas fa-location-arrow mr-2"></i>開啟導航回飯店</div>
             </section>
-
-            <div v-for="(spot, sIndex) in itinerary[currentDayIndex].spots" :key="spot.id">
-                <div v-if="sIndex > 0" class="flex flex-col items-center my-1 opacity-20">
-                    <span class="text-[9px] font-bold"><i class="fas fa-clock mr-1"></i>約 25-40分</span>
+            
+            <div v-for="(spot, sIndex) in itinerary[currentDayIndex].spots" :key="spot.id" class="bg-white rounded-3xl p-5 card-shadow border border-gray-100">
+                <div class="flex justify-between items-center mb-1"><span :class="['text-[9px] px-2 py-0.5 rounded font-black uppercase', typeClass(spot.type)]">{{ spot.type }}</span><button @click="removeSpot(sIndex)" class="text-gray-200">✕</button></div>
+                <h3 class="font-bold text-lg text-gray-800">{{ spot.name }}</h3>
+                <p class="text-sm text-gray-500 mt-1 mb-4">{{ spot.note }}</p>
+                <div class="flex gap-2">
+                    <button @click="navigate(spot.name)" class="flex-1 bg-slate-900 text-white py-3 rounded-2xl text-sm font-bold shadow-md active:bg-black">🚃 導航</button>
+                    <label class="w-12 bg-slate-50 flex items-center justify-center rounded-2xl cursor-pointer active:bg-slate-200">📷<input type="file" class="hidden" @change="uploadPhoto($event, sIndex)" accept="image/*"></label>
                 </div>
-                <div class="bg-white rounded-3xl p-5 card-shadow border border-gray-100">
-                    <div class="flex justify-between items-start mb-1">
-                        <span :class="['text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-widest', typeClass(spot.type)]">{{ spot.type }}</span>
-                        <button @click="removeSpot(sIndex)" class="text-gray-200">✕</button>
-                    </div>
-                    <h3 class="font-bold text-lg text-gray-800">{{ spot.name }}</h3>
-                    <p class="text-sm text-gray-500 mt-1 mb-4 leading-relaxed">{{ spot.note }}</p>
-                    <div class="flex gap-2">
-                        <button @click="navigate(spot.name)" class="flex-1 bg-slate-900 text-white py-3 rounded-2xl text-sm font-bold shadow-md">
-                            <i class="fas fa-train mr-1"></i> 轉乘導航
-                        </button>
-                        <label class="w-12 bg-slate-100 flex items-center justify-center rounded-2xl cursor-pointer">
-                            <i class="fas fa-camera text-slate-400"></i>
-                            <input type="file" class="hidden" @change="uploadPhoto($event, sIndex)" accept="image/*">
-                        </label>
-                    </div>
-                    <div v-if="spot.photo" class="mt-4 rounded-xl overflow-hidden"><img :src="spot.photo" class="w-full h-40 object-cover"></div>
-                </div>
+                <div v-if="spot.photo" class="mt-4 rounded-xl overflow-hidden shadow-inner"><img :src="spot.photo" class="w-full h-40 object-cover"></div>
             </div>
-            <button @click="isModalOpen = true" class="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm">+ 新增行程點</button>
+            <button @click="isModalOpen = true" class="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm">+ 新增景點</button>
         </main>
     </div>
 
     <div v-if="page === 'wallet'" class="p-4 space-y-4">
         <div class="bg-white rounded-3xl p-6 card-shadow border border-slate-100">
-            <h2 class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Balance 剩餘預算</h2>
-            <p :class="['text-3xl font-black mt-1', calculateBalance() < 0 ? 'text-red-500' : 'text-blue-600']">${{ formatNumber(calculateBalance()) }}</p>
-            <div class="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden">
-                <div class="bg-blue-500 h-full transition-all" :style="{width: (totalExpenses()/budget.total*100) + '%'}"></div>
-            </div>
+            <h2 class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none mb-1">Total Balance 預算剩餘 (TWD)</h2>
+            <p :class="['text-3xl font-black', calculateBalance() < 0 ? 'text-red-500' : 'text-blue-600']">${{ formatNumber(calculateBalance()) }}</p>
             <div class="mt-4 flex justify-between text-[11px] font-bold text-slate-400 uppercase">
                 <span>Spent: ${{ formatNumber(totalExpenses()) }}</span>
                 <span>Limit: ${{ formatNumber(budget.total) }}</span>
@@ -97,132 +73,99 @@
 
         <div class="bg-white rounded-3xl card-shadow overflow-hidden border border-slate-100">
             <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
-                <h3 class="font-bold text-sm">支出明細</h3>
-                <button @click="openExpenseModal" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold">+ 新增</button>
+                <h3 class="font-bold text-sm">支出清單</h3>
+                <button @click="openExpenseModal" class="bg-blue-600 text-white px-4 py-1.5 rounded-xl text-xs font-bold shadow-lg shadow-blue-100">+ 記帳</button>
             </div>
             <div class="divide-y divide-slate-50">
                 <div v-for="(exp, index) in budget.expenses" :key="index" class="p-4 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg">
-                            {{ categoryIcon(exp.category) }}
-                        </div>
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg">{{ categoryIcon(exp.category) }}</div>
                         <div>
                             <p class="font-bold text-sm text-slate-800">{{ exp.item }}</p>
-                            <p class="text-[10px] text-slate-400">{{ exp.note || '無備註' }} · {{ exp.date }}</p>
+                            <p class="text-[10px] text-slate-400">{{ exp.date }} · {{ exp.note || '無備註' }}</p>
                         </div>
                     </div>
                     <div class="text-right">
                         <p class="font-mono font-black text-red-500">-${{ formatNumber(exp.amount) }}</p>
+                        <p v-if="exp.originalJpy" class="text-[9px] text-slate-300 font-bold">￥{{ formatNumber(exp.originalJpy) }}</p>
                         <button @click="removeExpense(index)" class="text-[10px] text-slate-300">刪除</button>
                     </div>
                 </div>
-                <div v-if="budget.expenses.length === 0" class="p-10 text-center text-slate-300 text-sm">點擊按鈕記錄第一筆消費</div>
             </div>
         </div>
     </div>
 
     <div v-if="page === 'info'" class="p-4 space-y-4">
         <div class="bg-blue-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
-            <div class="relative z-10">
-                <h2 class="text-xl font-bold mb-2">Visit Japan Web</h2>
-                <p class="text-xs opacity-70 mb-5 leading-relaxed">入境審查、海關申報 QR Code 預備。</p>
-                <a href="https://vjw-lp.digital.go.jp/zh-hant/" target="_blank" class="inline-block bg-white text-blue-900 px-6 py-3 rounded-2xl text-sm font-black shadow-lg">
-                    <i class="fas fa-external-link-alt mr-2"></i>立刻開啟官方網頁
-                </a>
-            </div>
+            <h2 class="text-xl font-bold mb-1">Visit Japan Web</h2>
+            <p class="text-[10px] opacity-70 mb-5 leading-tight uppercase tracking-widest">Entry Procedures</p>
+            <a href="https://vjw-lp.digital.go.jp/zh-hant/" target="_blank" class="inline-block bg-white text-blue-900 px-6 py-3 rounded-2xl text-sm font-black shadow-lg">立刻開啟官方網頁</a>
             <i class="fas fa-passport absolute -right-4 -bottom-4 text-8xl opacity-10"></i>
         </div>
-
-        <div class="bg-white rounded-3xl card-shadow border border-slate-100 overflow-hidden">
-            <div class="p-4 bg-red-50 text-red-600 border-b flex items-center">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                <h3 class="font-black text-sm uppercase tracking-widest">緊急應變資訊</h3>
-            </div>
-            <div class="p-4 space-y-4">
-                <div class="border-b pb-3">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">駐日代表處 (東京)</p>
-                    <p class="text-sm font-bold mt-1">電話：<a href="tel:0332807811" class="text-blue-600">03-3280-7811</a></p>
-                    <p class="text-[10px] text-red-400 mt-1">※ 急難救助專線：090-2657-5206</p>
-                </div>
-                <div class="border-b pb-3">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">護照遺失辦理</p>
-                    <p class="text-sm leading-relaxed text-slate-600 mt-1">
-                        1. 向警察局報案取得遺失證明。<br>
-                        2. 聯繫代表處申請臨時入國證明。
-                    </p>
-                </div>
-                <div>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">醫療救護 (119)</p>
-                    <p class="text-sm text-slate-600 mt-1">若需通譯服務，可撥打 <span class="font-bold text-slate-900">03-5285-8181</span> (東京都醫療諮詢)。</p>
-                </div>
-            </div>
+        <div class="bg-white rounded-3xl card-shadow border border-red-50 p-5">
+             <h3 class="font-black text-red-600 text-xs mb-3 uppercase tracking-widest"><i class="fas fa-phone-alt mr-2"></i>緊急聯絡</h3>
+             <div class="space-y-3">
+                 <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-700">駐日代表處 (東京)</span><a href="tel:0332807811" class="text-blue-600 font-mono text-sm">03-3280-7811</a></div>
+                 <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-700">救急(火災、救護車)</span><a href="tel:119" class="text-red-500 font-mono text-sm">119</a></div>
+             </div>
         </div>
-
-        <div class="bg-white rounded-3xl card-shadow p-5 border border-slate-100">
-            <h3 class="font-bold text-sm mb-4">我的重要資訊備忘</h3>
-            <textarea v-model="infoNotes" @input="saveData" placeholder="例如：護照號碼、保險單號、備用信用卡號..." 
-                class="w-full h-32 bg-slate-50 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-blue-100"></textarea>
-        </div>
+        <textarea v-model="infoNotes" @input="saveData" placeholder="護照號碼、保險、備用資訊..." class="w-full h-32 bg-white rounded-3xl p-5 text-sm card-shadow border border-slate-100 outline-none"></textarea>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t flex justify-around p-3 safe-bottom z-50">
-        <button @click="page = 'trip'" :class="['flex flex-col items-center transition-colors', page === 'trip' ? 'text-blue-600' : 'text-slate-300']">
-            <i class="fas fa-map-marked-alt text-xl"></i><span class="text-[9px] font-bold mt-1 uppercase">Trip</span>
-        </button>
-        <button @click="page = 'wallet'" :class="['flex flex-col items-center transition-colors', page === 'wallet' ? 'text-blue-600' : 'text-slate-300']">
-            <i class="fas fa-wallet text-xl"></i><span class="text-[9px] font-bold mt-1 uppercase">Wallet</span>
-        </button>
-        <button @click="page = 'info'" :class="['flex flex-col items-center transition-colors', page === 'info' ? 'text-blue-600' : 'text-slate-300']">
-            <i class="fas fa-info-circle text-xl"></i><span class="text-[9px] font-bold mt-1 uppercase">Info</span>
-        </button>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t flex justify-around p-3 safe-bottom z-50 shadow-2xl">
+        <button @click="page = 'trip'" :class="['flex flex-col items-center', page === 'trip' ? 'text-blue-600 scale-110' : 'text-slate-300']"><i class="fas fa-map-marked-alt text-xl"></i><span class="text-[9px] font-black mt-1 uppercase">Trip</span></button>
+        <button @click="page = 'wallet'" :class="['flex flex-col items-center', page === 'wallet' ? 'text-blue-600 scale-110' : 'text-slate-300']"><i class="fas fa-wallet text-xl"></i><span class="text-[9px] font-black mt-1 uppercase">Wallet</span></button>
+        <button @click="page = 'info'" :class="['flex flex-col items-center', page === 'info' ? 'text-blue-600 scale-110' : 'text-slate-300']"><i class="fas fa-info-circle text-xl"></i><span class="text-[9px] font-black mt-1 uppercase">Info</span></button>
     </nav>
 
-    <div v-if="isExpenseModalOpen" class="fixed inset-0 bg-black/60 z-[100] flex items-end">
-        <div class="bg-white w-full rounded-t-[32px] p-6 pb-12 shadow-2xl">
-            <h2 class="text-xl font-bold mb-6 italic">Record Expense</h2>
+    <div v-if="isExpenseModalOpen" class="fixed inset-0 bg-black/60 z-[100] flex items-end backdrop-blur-sm">
+        <div class="bg-white w-full rounded-t-[40px] p-8 pb-12 shadow-2xl animate-up">
+            <div class="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-6"></div>
+            <h2 class="text-xl font-black mb-6 text-slate-800">新增消費紀錄</h2>
+            
+            <div class="flex bg-slate-100 p-1 rounded-2xl mb-4">
+                <button @click="expenseForm.currency = 'TWD'" :class="['flex-1 py-3 rounded-xl text-sm font-black transition-all', expenseForm.currency === 'TWD' ? 'active-currency shadow-sm' : 'text-slate-400']">台幣 TWD</button>
+                <button @click="expenseForm.currency = 'JPY'" :class="['flex-1 py-3 rounded-xl text-sm font-black transition-all', expenseForm.currency === 'JPY' ? 'active-currency shadow-sm' : 'text-slate-400']">日幣 JPY</button>
+            </div>
+
             <div class="space-y-3">
-                <input v-model="expenseForm.item" placeholder="品項名稱" class="w-full p-4 bg-slate-100 rounded-2xl outline-none">
                 <div class="flex gap-2">
-                    <input v-model.number="expenseForm.amount" type="number" placeholder="金額 (TWD)" class="flex-1 p-4 bg-slate-100 rounded-2xl outline-none">
-                    <select v-model="expenseForm.category" class="w-1/3 p-4 bg-slate-100 rounded-2xl outline-none text-sm font-bold">
+                    <input v-model.number="expenseForm.inputValue" type="number" :placeholder="expenseForm.currency === 'TWD' ? '輸入台幣金額' : '輸入日幣金額'" class="flex-[2] p-4 bg-slate-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 font-mono text-lg font-bold">
+                    <select v-model="expenseForm.category" class="flex-1 p-4 bg-slate-50 rounded-2xl outline-none text-sm font-bold border-r-8 border-transparent">
                         <option value="food">伙食</option>
                         <option value="transport">交通</option>
                         <option value="shop">購物</option>
                         <option value="other">其他</option>
                     </select>
                 </div>
-                <input v-model="expenseForm.note" placeholder="備註 (選填)" class="w-full p-4 bg-slate-100 rounded-2xl outline-none">
+                <input v-model="expenseForm.item" placeholder="品項名稱 (如：Lawson 晚餐)" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                <input v-model="expenseForm.note" placeholder="備註說明 (選填)" class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
+                
+                <p v-if="expenseForm.currency === 'JPY' && expenseForm.inputValue" class="text-xs text-blue-500 font-bold px-2">
+                    <i class="fas fa-calculator mr-1"></i> 自動換算約 NT$ {{ Math.round(expenseForm.inputValue * exchangeRate) }}
+                </p>
             </div>
-            <button @click="addExpense" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold mt-6 shadow-lg shadow-blue-100">確認記錄</button>
-            <button @click="isExpenseModalOpen = false" class="w-full py-3 text-slate-400 mt-2">取消</button>
-        </div>
-    </div>
-
-    <div v-if="isModalOpen" class="fixed inset-0 bg-black/60 z-[100] flex items-end">
-        <div class="bg-white w-full rounded-t-[32px] p-6 pb-12">
-            <h2 class="text-xl font-bold mb-4">新增行程</h2>
-            <input v-model="newSpot.name" placeholder="地點" class="w-full p-4 bg-slate-100 rounded-2xl mb-3 outline-none">
-            <textarea v-model="newSpot.note" placeholder="備註..." class="w-full p-4 bg-slate-100 rounded-2xl mb-6 h-24 outline-none"></textarea>
-            <button @click="addSpot" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold">確認</button>
-            <button @click="isModalOpen = false" class="w-full py-3 text-slate-400 mt-2">取消</button>
+            
+            <button @click="addExpense" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black mt-8 shadow-xl shadow-blue-100 active:scale-95 transition-transform">確認並記錄</button>
+            <button @click="isExpenseModalOpen = false" class="w-full py-4 text-slate-300 font-bold mt-2">取消</button>
         </div>
     </div>
 </div>
 
 <script>
 const { createApp } = Vue;
-const STORAGE_KEY = 'tokyo_v7_master';
+const STORAGE_KEY = 'tokyo_v8_final_app';
 
 createApp({
     data() {
         return {
             page: 'trip',
-            exchangeRate: '0.2115',
+            exchangeRate: 0.2115,
             currentDayIndex: 0,
             isModalOpen: false,
             isExpenseModalOpen: false,
             infoNotes: '',
-            expenseForm: { item: '', amount: 0, category: 'food', note: '' },
+            expenseForm: { item: '', inputValue: null, currency: 'JPY', category: 'food', note: '' },
             newSpot: { name: '', note: '', type: 'spot', photo: null },
             budget: { total: 49500, expenses: [] },
             itinerary: []
@@ -241,38 +184,34 @@ createApp({
         navigate(q) { window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}&travelmode=transit`, '_blank'); },
         openExpenseModal() { this.isExpenseModalOpen = true; },
         addExpense() {
-            if(!this.expenseForm.item || !this.expenseForm.amount) return;
-            this.budget.expenses.unshift({ ...this.expenseForm, date: new Date().toLocaleDateString() });
+            if(!this.expenseForm.item || !this.expenseForm.inputValue) return;
+            
+            let finalAmountTwd = this.expenseForm.inputValue;
+            let originalJpy = null;
+
+            // 如果選日幣，則換算為台幣
+            if (this.expenseForm.currency === 'JPY') {
+                originalJpy = this.expenseForm.inputValue;
+                finalAmountTwd = Math.round(originalJpy * this.exchangeRate);
+            }
+
+            this.budget.expenses.unshift({ 
+                item: this.expenseForm.item,
+                amount: finalAmountTwd,
+                originalJpy: originalJpy,
+                category: this.expenseForm.category,
+                note: this.expenseForm.note,
+                date: new Date().toLocaleDateString() 
+            });
+            
             this.saveData();
-            this.expenseForm = { item: '', amount: 0, category: 'food', note: '' };
+            this.expenseForm = { item: '', inputValue: null, currency: 'JPY', category: 'food', note: '' };
             this.isExpenseModalOpen = false;
         },
         totalExpenses() { return this.budget.expenses.reduce((s, e) => s + (e.amount || 0), 0); },
         calculateBalance() { return this.budget.total - this.totalExpenses(); },
-        removeExpense(i) { this.budget.expenses.splice(i, 1); this.saveData(); },
-        addSpot() {
-            if(this.newSpot.name) {
-                this.itinerary[this.currentDayIndex].spots.push({...this.newSpot, id: Date.now()});
-                this.saveData();
-                this.newSpot = { name: '', note: '', type: 'spot', photo: null };
-                this.isModalOpen = false;
-            }
-        },
-        uploadPhoto(e, i) {
-            const file = e.target.files[0];
-            if (file) {
-                const r = new FileReader();
-                r.onload = (ev) => { this.itinerary[this.currentDayIndex].spots[i].photo = ev.target.result; this.saveData(); };
-                r.readAsDataURL(file);
-            }
-        },
-        saveData() { 
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
-                itinerary: this.itinerary, 
-                budget: this.budget,
-                infoNotes: this.infoNotes
-            })); 
-        },
+        removeExpense(i) { if(confirm('刪除此筆記錄？')) { this.budget.expenses.splice(i, 1); this.saveData(); } },
+        saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ itinerary: this.itinerary, budget: this.budget, infoNotes: this.infoNotes })); },
         init() {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
@@ -281,6 +220,7 @@ createApp({
                 this.budget = d.budget;
                 this.infoNotes = d.infoNotes || '';
             } else {
+                // 預設行程內容 (略...)
                 this.itinerary = [
                     { date: '2026-03-05', displayDate: '3/05 (四)', hotel: '清澄白河 Comfort Hotel', hotelAddr: '1 Chome-6-12 Shirakawa, Koto City, Tokyo', spots: [{ id: 1, name: '羽田機場 (HND)', type: 'spot', note: '抵達 (TSA-HND)\n12:00 WBC 台澳' }] },
                     { date: '2026-03-06', displayDate: '3/06 (五)', hotel: '清澄白河 Comfort Hotel', hotelAddr: '1 Chome-6-12 Shirakawa, Koto City, Tokyo', spots: [{ id: 2, name: '肉の田じま', type: 'food', note: '19:00 WBC 台日' }] },
@@ -290,13 +230,13 @@ createApp({
                     { date: '2026-03-10', displayDate: '3/10 (二)', hotel: 'JR東日本酒店 Mets 橫濱', hotelAddr: '神奈川縣橫濱市神奈川區鶴屋町1-1-1', spots: [{ id: 6, name: '鎌倉大佛', type: 'spot', note: '長谷站、江之島' }] },
                     { date: '2026-03-11', displayDate: '3/11 (三)', hotel: 'Home', hotelAddr: '', spots: [{ id: 7, name: '羽田機場', type: 'spot', note: '返家' }] }
                 ];
-                this.budget.expenses = [{ item: 'ANA 機票', amount: 25186, category: 'transport', note: '來回機票', date: '2026/03/05' }];
+                this.budget.expenses = [{ item: 'ANA 機票', amount: 25186, originalJpy: null, category: 'transport', note: '已付款', date: '2026/03/05' }];
             }
         }
     },
     created() {
         this.init();
-        fetch('https://api.exchangerate-api.com/v4/latest/JPY').then(r => r.json()).then(d => this.exchangeRate = d.rates.TWD.toFixed(4)).catch(()=>{});
+        fetch('https://api.exchangerate-api.com/v4/latest/JPY').then(r => r.json()).then(d => this.exchangeRate = parseFloat(d.rates.TWD.toFixed(4))).catch(()=>{});
     }
 }).mount('#app');
 </script>
